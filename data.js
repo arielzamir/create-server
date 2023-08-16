@@ -1,6 +1,6 @@
 const { v4: uuid4 } = require("uuid");
 
-const array = [
+let array = [
   {
     id: uuid4(),
     email: "someone1@gmail.com",

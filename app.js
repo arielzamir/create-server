@@ -1,6 +1,8 @@
 const express = require("express");
-const data = require("./data");
+let data = require("./data");
 const { v4: uuid4 } = require("uuid");
+const bcrypt = require("bcrypt");
+const e = require("express");
 const app = express();
 const port = 3000;
 app.use(express.json());
@@ -22,13 +24,20 @@ app.get("/users/:id", (req, res) => {
 
 //Create a new user
 app.post("/new-user", (req, res) => {
+  const saltRounds = 10;
   const newUser = {
     id: uuid4(),
     email: req.body.email,
-    password: req.body.password,
+    password: "",
   };
-  data.push(newUser);
-  res.send(data);
+  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+    if (err) {
+      return res.status(500).json({ error: "Failed to hash password" });
+    }
+    newUser.password = hash;
+    data.push(newUser);
+    res.send(data);
+  });
 });
 
 // // Update user by ID
@@ -48,26 +57,26 @@ app.put("/update-user/:id", (req, res) => {
 // // Delete user by ID
 app.delete("/delete-user/:id", (req, res) => {
   const userId = req.params.id;
-  const newArray = [];
-  for (let i = 0; i < data.length; i++) {
-    if (data[i].id !== userId) {
-      newArray.push(data[i]);
-    }
-  }
-  res.send(newArray);
+  let newData = data.filter((user) => user.id !== userId);
+  data = newData;
+  res.send(data);
 });
 
 //Stage 3
 app.post("/check-user", (req, res) => {
   const userEmail = req.body.email;
   const userPassword = req.body.password;
-  data.forEach((user) => {
-    if (user.email === userEmail && user.password === userPassword) {
-      res.send("User is connected");
-    } else {
-      res.send("wrong credentials");
-    }
-  });
+  const user1 = data.find((user) => user.email === userEmail);
+  if (!user1) {
+    return res.json(false);
+  }
+  const passwordMatch = bcrypt.compareSync(userPassword, user1.password);
+  const user2 = data.find((user) => user.password === userPassword);
+  if (passwordMatch || user2) {
+    res.json(true);
+  } else {
+    res.json(false);
+  }
 });
 
 app.listen(port, () => {
