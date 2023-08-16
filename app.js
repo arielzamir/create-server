@@ -57,6 +57,19 @@ app.delete("/delete-user/:id", (req, res) => {
   res.send(newArray);
 });
 
+//Stage 3
+app.post("/check-user", (req, res) => {
+  const userEmail = req.body.email;
+  const userPassword = req.body.password;
+  data.forEach((user) => {
+    if (user.email === userEmail && user.password === userPassword) {
+      res.send("User is connected");
+    } else {
+      res.send("wrong credentials");
+    }
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server is up and running on port:${port}`);
 });
