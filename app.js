@@ -3,9 +3,17 @@ let data = require("./data");
 const { v4: uuid4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const e = require("express");
+const Joi = require("joi");
 const app = express();
 const port = 3000;
 app.use(express.json());
+const userSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string()
+    .min(8)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])/)
+    .required(),
+});
 
 // Read all users
 app.get("/users", (req, res) => {
@@ -30,11 +38,18 @@ app.post("/new-user", (req, res) => {
     email: req.body.email,
     password: "",
   };
+
   bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
     if (err) {
       return res.status(500).json({ error: "Failed to hash password" });
     }
     newUser.password = hash;
+
+    const { error } = userSchema.validate(newUser, { allowUnknown: true });
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
     data.push(newUser);
     res.send(data);
   });
@@ -66,13 +81,15 @@ app.delete("/delete-user/:id", (req, res) => {
 app.post("/check-user", (req, res) => {
   const userEmail = req.body.email;
   const userPassword = req.body.password;
-  const user1 = data.find((user) => user.email === userEmail);
-  if (!user1) {
+  const user = data.find((user) => user.email === userEmail);
+
+  if (!user) {
     return res.json(false);
   }
-  const passwordMatch = bcrypt.compareSync(userPassword, user1.password);
-  const user2 = data.find((user) => user.password === userPassword);
-  if (passwordMatch || user2) {
+
+  const passwordMatch = bcrypt.compareSync(userPassword, user.password);
+
+  if (passwordMatch) {
     res.json(true);
   } else {
     res.json(false);
