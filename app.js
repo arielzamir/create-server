@@ -62,7 +62,7 @@ app.delete("/delete-user/:id", (req, res) => {
   res.send(data);
 });
 
-//Stage 3
+//Stage 3 and 4
 app.post("/check-user", (req, res) => {
   const userEmail = req.body.email;
   const userPassword = req.body.password;
