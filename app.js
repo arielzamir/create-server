@@ -1,9 +1,10 @@
 const express = require("express");
-let data = require("./data");
+let data = require("./data.json");
 const { v4: uuid4 } = require("uuid");
 const bcrypt = require("bcrypt");
 const e = require("express");
 const Joi = require("joi");
+const jsonfile = require("jsonfile");
 const app = express();
 const port = 3000;
 app.use(express.json());
@@ -14,10 +15,19 @@ const userSchema = Joi.object({
     .pattern(/^(?=.*[a-z])(?=.*[A-Z])/)
     .required(),
 });
+const filePath = "data.json";
 
 // Read all users
 app.get("/users", (req, res) => {
-  res.json(data);
+  jsonfile.readFile(filePath, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ error: "Internal Server Error" });
+    } else {
+      res.send(data);
+    }
+  });
+  // res.json(data);
 });
 
 //Read user by ID
@@ -36,19 +46,19 @@ app.post("/new-user", (req, res) => {
   const newUser = {
     id: uuid4(),
     email: req.body.email,
-    password: "",
+    password: req.body.password, // Store the plain password for validation
   };
 
-  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+  const { error } = userSchema.validate(newUser, { allowUnknown: true });
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+
+  bcrypt.hash(newUser.password, saltRounds, function (err, hash) {
     if (err) {
       return res.status(500).json({ error: "Failed to hash password" });
     }
     newUser.password = hash;
-
-    const { error } = userSchema.validate(newUser, { allowUnknown: true });
-    if (error) {
-      return res.status(400).json({ error: error.details[0].message });
-    }
 
     data.push(newUser);
     res.send(data);
